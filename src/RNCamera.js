@@ -279,6 +279,7 @@ type PropsType = typeof View.props & {
   faceDetectionClassifications?: number,
   onFacesDetected?: ({ faces: Array<TrackedFaceFeature> }) => void,
   onTextRecognized?: ({ textBlocks: Array<TrackedTextFeature> }) => void,
+  onModelProcessed?: () => void,
   captureAudio?: boolean,
   keepAudioSession?: boolean,
   useCamera2Api?: boolean,
@@ -415,6 +416,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
     onGoogleVisionBarcodesDetected: PropTypes.func,
     onFacesDetected: PropTypes.func,
     onTextRecognized: PropTypes.func,
+    onModelProcessed: PropTypes.func,
     onSubjectAreaChanged: PropTypes.func,
     trackingEnabled: PropTypes.bool,
     faceDetectionMode: PropTypes.number,
@@ -859,6 +861,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
             onFacesDetected={this._onObjectDetected(this.props.onFacesDetected)}
             onTextRecognized={this._onObjectDetected(this.props.onTextRecognized)}
             onPictureSaved={this._onPictureSaved}
+            onModelProcessed={this._onObjectDetected(this.props.onModelProcessed)}
             onSubjectAreaChanged={this._onSubjectAreaChanged}
           />
           {this.renderChildren()}
@@ -892,6 +895,10 @@ export default class Camera extends React.Component<PropsType, StateType> {
 
     if (props.onTextRecognized) {
       newProps.textRecognizerEnabled = true;
+    }
+
+    if (props.onModelProcessed && props.modelParams) {
+      newProps.modelParams = props.modelParams;
     }
 
     if (Platform.OS === 'ios') {

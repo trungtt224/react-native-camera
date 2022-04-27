@@ -28,8 +28,8 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
     EVENT_ON_PICTURE_SAVED("onPictureSaved"),
     EVENT_ON_RECORDING_START("onRecordingStart"),
     EVENT_ON_RECORDING_END("onRecordingEnd"),
-    EVENT_ON_TOUCH("onTouch");
-
+    EVENT_ON_TOUCH("onTouch"),
+    EVENT_ON_MODEL_PROCESSED("onModelProcessed");
 
     private final String mName;
 
@@ -243,4 +243,14 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
     }
   }
   /**---limit scan area addition---**/
+
+  @ReactProp(name = "modelParams")
+  public void setModelParams(RNCameraView view, ReadableMap model) {
+    String modelFile = model.getString("file");
+    int inputDimX = model.getInt("inputDimX");
+    int inputDimY = model.getInt("inputDimY");
+    int outputDim = model.getInt("outputDim");
+    int freqms = model.hasKey("freqms") ? model.getInt("freqms") : 0;
+    view.setModelFile(modelFile, inputDimX, inputDimY, outputDim, freqms);
+  }
 }
