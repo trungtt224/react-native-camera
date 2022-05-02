@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import tflite.Detector;
+
 public class RNCameraViewHelper {
 
   public static final String[][] exifTags = new String[][]{
@@ -336,9 +338,30 @@ public class RNCameraViewHelper {
     });
   }
 
+//  public static void emitModelProcessedEvent(
+//          ViewGroup view,
+//          ByteBuffer data,
+//          ImageDimensions dimensions) {
+//    float density = view.getResources().getDisplayMetrics().density;
+//
+//    double scaleX = (double) view.getWidth() / (dimensions.getWidth() * density);
+//    double scaleY = (double) view.getHeight() / (dimensions.getHeight() * density);
+//
+//    ModelProcessedEvent event = ModelProcessedEvent.obtain(
+//            view.getId(),
+//            data,
+//            dimensions,
+//            scaleX,
+//            scaleY
+//    );
+//
+//    ReactContext reactContext = (ReactContext) view.getContext();
+//    reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher().dispatchEvent(event);
+//  }
+
   public static void emitModelProcessedEvent(
           ViewGroup view,
-          ByteBuffer data,
+          Detector.Recognition recognition,
           ImageDimensions dimensions) {
     float density = view.getResources().getDisplayMetrics().density;
 
@@ -347,7 +370,7 @@ public class RNCameraViewHelper {
 
     ModelProcessedEvent event = ModelProcessedEvent.obtain(
             view.getId(),
-            data,
+            recognition,
             dimensions,
             scaleX,
             scaleY

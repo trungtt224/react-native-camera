@@ -16,6 +16,7 @@ import android.os.Build;
 import androidx.core.content.ContextCompat;
 
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -31,6 +32,7 @@ import com.google.zxing.MultiFormatReader;
 import com.google.zxing.Result;
 import org.reactnative.barcodedetector.RNBarcodeDetector;
 import org.reactnative.camera.tasks.*;
+import org.reactnative.camera.utils.CommonUtil;
 import org.reactnative.camera.utils.ImageDimensions;
 import org.reactnative.camera.utils.RNFileUtils;
 import org.reactnative.facedetector.RNFaceDetector;
@@ -46,6 +48,9 @@ import java.nio.channels.FileChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import tflite.Detector;
+import tflite.TFLiteObjectDetectionAPIModel;
 
 public class RNCameraView extends CameraView implements LifecycleEventListener, BarCodeScannerAsyncTaskDelegate, FaceDetectorAsyncTaskDelegate,
     BarcodeDetectorAsyncTaskDelegate, TextRecognizerAsyncTaskDelegate, PictureSavedDelegate, ModelProcessorAsyncTaskDelegate {
@@ -84,6 +89,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   private String mModelFile;
   private Interpreter mModelProcessor;
+  private Detector xDetector;
   private int mModelMaxFreqms;
   private ByteBuffer mModelInput;
   private int[] mModelViewBuf;
@@ -193,7 +199,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
         boolean willCallTextTask = mShouldRecognizeText && !textRecognizerTaskLock && cameraView instanceof TextRecognizerAsyncTaskDelegate;
         boolean willCallModelTask = mShouldProcessModel && !modelProcessorTaskLock && cameraView instanceof ModelProcessorAsyncTaskDelegate;
 
-        if (!willCallBarCodeTask && !willCallFaceTask && !willCallGoogleBarcodeTask && !willCallTextTask) {
+        if (!willCallBarCodeTask && !willCallFaceTask && !willCallGoogleBarcodeTask && !willCallTextTask && !willCallModelTask) {
           return;
         }
 
@@ -242,8 +248,14 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
         if (willCallModelTask) {
           modelProcessorTaskLock = true;
           getImageData((TextureView) cameraView.getView());
-          ModelProcessorAsyncTaskDelegate delegate = (ModelProcessorAsyncTaskDelegate) cameraView;
-          new ModelProcessorAsyncTask(delegate, mModelProcessor, mModelInput, mModelOutput, mModelMaxFreqms, width, height, correctRotation).execute();
+          Bitmap bitmap = ((TextureView) cameraView.getView()).getBitmap();
+
+          try {
+            Thread.sleep(100);
+            ModelProcessorAsyncTaskDelegate delegate = (ModelProcessorAsyncTaskDelegate) cameraView;
+            new ModelProcessorAsyncTask(delegate, bitmap, xDetector, mModelProcessor, mModelInput, mModelOutput, mModelMaxFreqms, width, height, correctRotation).execute();
+          } catch (Exception ex) {
+          }
         }
       }
     });
@@ -760,15 +772,13 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   };
 
   @Override
-  public void onModelProcessed(ByteBuffer data, int sourceWidth, int sourceHeight, int sourceRotation) {
-//    if (!mShouldProcessModel) {
-//      return;
-//    }
-
-    ByteBuffer dataDetected = data == null ? ByteBuffer.allocate(0) : data;
+  public void onModelProcessed(Detector.Recognition recognition, int sourceWidth, int sourceHeight, int sourceRotation) {
+    if (!mShouldProcessModel) {
+      return;
+    }
     ImageDimensions dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
 
-    RNCameraViewHelper.emitModelProcessedEvent(this, dataDetected, dimensions);
+    RNCameraViewHelper.emitModelProcessedEvent(this, recognition, dimensions);
   }
 
   @Override
@@ -785,9 +795,19 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
   }
 
+  private static final int TF_OD_API_INPUT_SIZE = 300;
+  private static final String TF_OD_API_MODEL_FILE = "detect.tflite";
+  private static final String TF_OD_API_LABELS_FILE = "labels.txt";
+  private static final boolean TF_OD_API_IS_QUANTIZED = false;
+
   private void setupModelProcessor() {
     try {
       mModelProcessor = new Interpreter(loadModelFile());
+      xDetector = TFLiteObjectDetectionAPIModel
+              .create(getContext(),
+                      TF_OD_API_MODEL_FILE,
+                      TF_OD_API_LABELS_FILE,
+                      TF_OD_API_INPUT_SIZE, TF_OD_API_IS_QUANTIZED);
       mModelInput = ByteBuffer.allocateDirect(mModelImageDimX * mModelImageDimY * 3);
       mModelViewBuf = new int[mModelImageDimX * mModelImageDimY];
       mModelOutput = ByteBuffer.allocateDirect(mModelOutputDim);
