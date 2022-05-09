@@ -5,14 +5,19 @@ import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
+import android.os.Environment;
 import android.os.Trace;
 import android.util.Log;
+import android.view.TextureView;
 
 
 import com.google.android.gms.common.internal.service.Common;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -21,7 +26,9 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,8 +50,8 @@ public class TFLiteObjectDetectionAPIModel implements Detector {
     // Only return this many results.
     private static final int NUM_DETECTIONS = 10;
     // Float model
-    private static final float IMAGE_MEAN = 128.0f;
-    private static final float IMAGE_STD = 128.0f;
+    private static final float IMAGE_MEAN = 127.5f;
+    private static final float IMAGE_STD = 127.5f;
     // Number of threads in the java app
     private static final int NUM_THREADS = 4;
     private boolean isModelQuantized;
@@ -150,26 +157,37 @@ public class TFLiteObjectDetectionAPIModel implements Detector {
     @Override
     public List<Recognition> recognizeImage(final Bitmap bitmap) {
         // Log this method so that it can be analyzed with systrace.
+        Log.d("recognizeImage",
+                String.format("bitmap size: width=%d, height=%d", bitmap.getWidth(), bitmap.getHeight()));
+
         ImageProcessor imageProcessor =
                 new ImageProcessor.Builder()
-                        .add(new ResizeOp(300, 300, ResizeOp.ResizeMethod.BILINEAR))
+                        .add(new ResizeOp(inputSize, inputSize, ResizeOp.ResizeMethod.BILINEAR))
                         .build();
-
         TensorImage tensorImage = new TensorImage(DataType.UINT8);
         tensorImage.load(bitmap);
         tensorImage = imageProcessor.process(tensorImage);
 
+        Log.d(CommonUtil.TAG,
+                String.format("recognizeImage: image tensor size: width=%d, height=%d",
+                        tensorImage.getWidth(), tensorImage.getHeight()));
+        Log.d(CommonUtil.TAG,
+                String.format("recognizeImage: image tensor's bitmap size: width=%d, height=%d",
+                        tensorImage.getBitmap().getWidth(), tensorImage.getBitmap().getHeight()));
+
         Trace.beginSection("recognizeImage");
 
         Trace.beginSection("preprocessBitmap");
-//        Log.d(CommonUtil.TAG, bitmap.getWidth() + " " + bitmap.getHeight());
+
+//        storeImage(bitmap);
         // Preprocess the image data from 0-255 int to normalized float based
         // on the provided parameters.
         try {
             int width = tensorImage.getWidth();
             int height = tensorImage.getHeight();
 
-            bitmap.getPixels(intValues, 0, width, 0, 0, width, height);
+            tensorImage.getBitmap().getPixels(intValues, 0, width, 0, 0, width, height);
+//            bitmap.getPixels(intValues, 0, width, 0, 0, width, height);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -215,20 +233,30 @@ public class TFLiteObjectDetectionAPIModel implements Detector {
         // after scaling them back to the input size.
         final ArrayList<Recognition> recognitions = new ArrayList<>(NUM_DETECTIONS);
         for (int i = 0; i < NUM_DETECTIONS; ++i) {
-            int originWidth = bitmap.getWidth();
-            int originHeight = bitmap.getHeight();
-            System.out.println(originWidth + " : " + originHeight);
-//            0.016911268 : 0.063352704 : 1713 : 2285
+            int originalWidth = bitmap.getWidth();
+            int originalHeight = bitmap.getHeight();
+            Log.d(CommonUtil.TAG, "recognizeImage: " + originalWidth + " x " + originalHeight);
+            int ymin = (int) Math.max(1, outputLocations[0][i][0] * originalHeight);
+            int xmin = (int) Math.max(1, outputLocations[0][i][1] * originalWidth);
+            int ymax = (int) Math.min(originalHeight, outputLocations[0][i][2] * originalHeight);
+            int xmax = (int) Math.min(originalWidth, outputLocations[0][i][3] * originalWidth);
+
             final RectF detection =
-                    new RectF(
-                            outputLocations[0][i][1] * originWidth,
-                            outputLocations[0][i][0] * originHeight,
-                            outputLocations[0][i][3] * originWidth,
-                            outputLocations[0][i][2] * originHeight);
+                    new RectF(xmin, ymin, xmax, ymax);
+            Log.d(CommonUtil.TAG, String.format("Detection: top [%s] - left [%s] - bottom [%s] - right [%s]",
+                    detection.top, detection.left, detection.bottom, detection.right));
+
+//            final RectF detection =
+//                    new RectF(
+//                            outputLocations[0][i][1],
+//                            outputLocations[0][i][0],
+//                            outputLocations[0][i][3],
+//                            outputLocations[0][i][2]);
+
             // SSD Mobilenet V1 Model assumes class 0 is background class
             // in label file and class labels start from 1 to number_of_classes+1,
             // while outputClasses correspond to class index from 0 to number_of_classes
-            int labelOffset = 1;
+            int labelOffset = 0;
             recognitions.add(
                     new Recognition(
                             "" + i,
@@ -270,5 +298,48 @@ public class TFLiteObjectDetectionAPIModel implements Detector {
     private void recreateInterpreter() {
         tfLite.close();
         tfLite = new Interpreter(tfLiteModel, tfLiteOptions);
+    }
+
+    private void storeImage(Bitmap image) {
+        File pictureFile = getOutputMediaFile();
+        if (pictureFile == null) {
+            Log.d(CommonUtil.TAG,
+                    "Error creating media file, check storage permissions: ");// e.getMessage());
+            return;
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(pictureFile);
+            image.compress(Bitmap.CompressFormat.PNG, 90, fos);
+            fos.close();
+        } catch (FileNotFoundException e) {
+            Log.d(CommonUtil.TAG, "File not found: " + e.getMessage());
+        } catch (IOException e) {
+            Log.d(CommonUtil.TAG, "Error accessing file: " + e.getMessage());
+        }
+    }
+
+    private File getOutputMediaFile(){
+        // To be safe, you should check that the SDCard is mounted
+        // using Environment.getExternalStorageState() before doing this.
+        File mediaStorageDir = new File(Environment.getExternalStorageDirectory()
+                + "/Download");
+
+        Log.d(CommonUtil.TAG, mediaStorageDir.getAbsolutePath());
+
+        // This location works best if you want the created images to be shared
+        // between applications and persist after your app has been uninstalled.
+
+        // Create the storage directory if it does not exist
+        if (! mediaStorageDir.exists()){
+            if (! mediaStorageDir.mkdirs()){
+                return null;
+            }
+        }
+        // Create a media file name
+        String timeStamp = new SimpleDateFormat("ddMMyyyy_HHmm").format(new Date());
+        File mediaFile;
+        String mImageName="MI_"+ timeStamp +".jpg";
+        mediaFile = new File(mediaStorageDir.getPath() + File.separator + mImageName);
+        return mediaFile;
     }
 }

@@ -22,12 +22,8 @@ import java.util.concurrent.TimeUnit;
 
 import tflite.Detector;
 
-public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, Detector.Recognition> {
-    private byte[] mImageData;
+public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, List<Detector.Recognition>> {
     private ModelProcessorAsyncTaskDelegate mDelegate;
-    private Interpreter mModelProcessor;
-    private ByteBuffer mInputBuf;
-    private ByteBuffer mOutputBuf;
     private int mModelMaxFreqms;
     private int mWidth;
     private int mHeight;
@@ -36,38 +32,10 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, Detector.Reco
     private Bitmap croppedBitmap = null;
     private Bitmap rgbFrameBitmap = null;
 
-    public ModelProcessorAsyncTask(Detector detector) {
-        this.detector = detector;
-
-    }
-
-    public ModelProcessorAsyncTask(
-            ModelProcessorAsyncTaskDelegate delegate,
-            Interpreter modelProcessor,
-            ByteBuffer inputBuf,
-            ByteBuffer outputBuf,
-            int modelMaxFreqms,
-            int width,
-            int height,
-            int rotation
-    ) {
-        mDelegate = delegate;
-        mModelProcessor = modelProcessor;
-        mInputBuf = inputBuf;
-        mOutputBuf = outputBuf;
-        mModelMaxFreqms = modelMaxFreqms;
-        mWidth = width;
-        mHeight = height;
-        mRotation = rotation;
-    }
-
     public ModelProcessorAsyncTask(
             ModelProcessorAsyncTaskDelegate delegate,
             Bitmap bitmap,
             Detector detector,
-            Interpreter modelProcessor,
-            ByteBuffer inputBuf,
-            ByteBuffer outputBuf,
             int modelMaxFreqms,
             int width,
             int height,
@@ -76,55 +44,6 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, Detector.Reco
         mDelegate = delegate;
         this.detector = detector;
         this.rgbFrameBitmap = bitmap;
-        mModelProcessor = modelProcessor;
-        mInputBuf = inputBuf;
-        mOutputBuf = outputBuf;
-        mModelMaxFreqms = modelMaxFreqms;
-        mWidth = width;
-        mHeight = height;
-        mRotation = rotation;
-    }
-
-    public ModelProcessorAsyncTask(
-            ModelProcessorAsyncTaskDelegate delegate,
-            byte[] data,
-            Detector detector,
-            Interpreter modelProcessor,
-            ByteBuffer inputBuf,
-            ByteBuffer outputBuf,
-            int modelMaxFreqms,
-            int width,
-            int height,
-            int rotation
-    ) {
-        mDelegate = delegate;
-        this.detector = detector;
-        mImageData = data;
-        mModelProcessor = modelProcessor;
-        mInputBuf = inputBuf;
-        mOutputBuf = outputBuf;
-        mModelMaxFreqms = modelMaxFreqms;
-        mWidth = width;
-        mHeight = height;
-        mRotation = rotation;
-    }
-
-    public ModelProcessorAsyncTask(
-            ModelProcessorAsyncTaskDelegate delegate,
-            Detector detector,
-            Interpreter modelProcessor,
-            ByteBuffer inputBuf,
-            ByteBuffer outputBuf,
-            int modelMaxFreqms,
-            int width,
-            int height,
-            int rotation
-    ) {
-        this.detector = detector;
-        mDelegate = delegate;
-        mModelProcessor = modelProcessor;
-        mInputBuf = inputBuf;
-        mOutputBuf = outputBuf;
         mModelMaxFreqms = modelMaxFreqms;
         mWidth = width;
         mHeight = height;
@@ -133,8 +52,8 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, Detector.Reco
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    protected Detector.Recognition doInBackground(Void... voids) {
-        if (isCancelled() || mDelegate == null || mModelProcessor == null || detector == null) {
+    protected List<Detector.Recognition> doInBackground(Void... voids) {
+        if (isCancelled() || mDelegate == null || detector == null) {
             return null;
         }
         long startTime = SystemClock.uptimeMillis();
@@ -155,15 +74,11 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, Detector.Reco
                 }
             }
         } catch (Exception e) {}
-        if (recognitions != null && !recognitions.isEmpty()) {
-            return recognitions.get(0);
-        } else {
-            return null;
-        }
+        return recognitions;
     }
 
     @Override
-    protected void onPostExecute(Detector.Recognition data) {
+    protected void onPostExecute(List<Detector.Recognition> data) {
         super.onPostExecute(data);
 
         if (data != null) {

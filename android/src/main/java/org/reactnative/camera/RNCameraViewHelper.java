@@ -24,6 +24,7 @@ import org.reactnative.facedetector.RNFaceDetector;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.List;
 
 import tflite.Detector;
 
@@ -361,7 +362,7 @@ public class RNCameraViewHelper {
 
   public static void emitModelProcessedEvent(
           ViewGroup view,
-          Detector.Recognition recognition,
+          List<Detector.Recognition> recognitions,
           ImageDimensions dimensions) {
     float density = view.getResources().getDisplayMetrics().density;
 
@@ -370,7 +371,7 @@ public class RNCameraViewHelper {
 
     ModelProcessedEvent event = ModelProcessedEvent.obtain(
             view.getId(),
-            recognition,
+            recognitions,
             dimensions,
             scaleX,
             scaleY

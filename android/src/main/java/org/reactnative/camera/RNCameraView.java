@@ -88,6 +88,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   private RNBarcodeDetector mGoogleBarcodeDetector;
 
   private String mModelFile;
+  private String mLabelFile;
   private Interpreter mModelProcessor;
   private Detector xDetector;
   private int mModelMaxFreqms;
@@ -253,7 +254,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
           try {
             Thread.sleep(100);
             ModelProcessorAsyncTaskDelegate delegate = (ModelProcessorAsyncTaskDelegate) cameraView;
-            new ModelProcessorAsyncTask(delegate, bitmap, xDetector, mModelProcessor, mModelInput, mModelOutput, mModelMaxFreqms, width, height, correctRotation).execute();
+            new ModelProcessorAsyncTask(delegate, bitmap, xDetector, mModelMaxFreqms, width, height, correctRotation).execute();
           } catch (Exception ex) {
           }
         }
@@ -772,13 +773,13 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   };
 
   @Override
-  public void onModelProcessed(Detector.Recognition recognition, int sourceWidth, int sourceHeight, int sourceRotation) {
+  public void onModelProcessed(List<Detector.Recognition> recognitions, int sourceWidth, int sourceHeight, int sourceRotation) {
     if (!mShouldProcessModel) {
       return;
     }
     ImageDimensions dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
 
-    RNCameraViewHelper.emitModelProcessedEvent(this, recognition, dimensions);
+    RNCameraViewHelper.emitModelProcessedEvent(this, recognitions, dimensions);
   }
 
   @Override
@@ -802,15 +803,11 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
 
   private void setupModelProcessor() {
     try {
-      mModelProcessor = new Interpreter(loadModelFile());
       xDetector = TFLiteObjectDetectionAPIModel
               .create(getContext(),
-                      TF_OD_API_MODEL_FILE,
-                      TF_OD_API_LABELS_FILE,
+                      mModelFile,
+                      mLabelFile,
                       TF_OD_API_INPUT_SIZE, TF_OD_API_IS_QUANTIZED);
-      mModelInput = ByteBuffer.allocateDirect(mModelImageDimX * mModelImageDimY * 3);
-      mModelViewBuf = new int[mModelImageDimX * mModelImageDimY];
-      mModelOutput = ByteBuffer.allocateDirect(mModelOutputDim);
     } catch(Exception e) {}
   }
 
@@ -822,6 +819,19 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     this.mModelMaxFreqms = freqms;
     boolean shouldProcessModel = (modelFile != null);
     if (shouldProcessModel && mModelProcessor == null) {
+      setupModelProcessor();
+    }
+    this.mShouldProcessModel = shouldProcessModel;
+    setScanning(mShouldDetectFaces || mShouldGoogleDetectBarcodes || mShouldScanBarCodes || mShouldRecognizeText || mShouldProcessModel);
+  }
+
+  public void setObjectModelFile(String modelFile, String labelFile, int freqms) {
+    this.mModelFile = modelFile;
+    this.mLabelFile = labelFile;
+    this.mModelMaxFreqms = freqms;
+
+    boolean shouldProcessModel = (modelFile != null);
+    if (shouldProcessModel && xDetector == null) {
       setupModelProcessor();
     }
     this.mShouldProcessModel = shouldProcessModel;
