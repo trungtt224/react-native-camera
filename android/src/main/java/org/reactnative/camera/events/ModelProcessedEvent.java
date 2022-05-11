@@ -1,20 +1,28 @@
 package org.reactnative.camera.events;
 
+import android.graphics.Bitmap;
 import android.graphics.RectF;
+import android.os.Build;
+import android.util.Log;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.util.Pools;
 
+import com.facebook.common.util.Hex;
 import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.uimanager.events.Event;
 import com.facebook.react.uimanager.events.RCTEventEmitter;
 
 import org.reactnative.camera.CameraViewManager;
+import org.reactnative.camera.utils.CommonUtil;
 import org.reactnative.camera.utils.ImageDimensions;
 
-import java.nio.ByteBuffer;
+import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
+import java.util.Base64;
 import java.util.List;
 
 import tflite.Detector;
@@ -25,14 +33,18 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
 
     private double mScaleX;
     private double mScaleY;
-//    private ByteBuffer mData;
-    private List<Detector.Recognition> mData;
+    //    private ByteBuffer mData;
+    private List<Detector.Recognition> recognitions;
+    private byte[] imageData;
+    private Bitmap rgbImgBitmap;
     private ImageDimensions mImageDimensions;
 
 
     public static ModelProcessedEvent obtain(
             int viewTag,
             List<Detector.Recognition> data,
+            byte[] imageData,
+            Bitmap rgbImgBitmap,
             ImageDimensions dimensions,
             double scaleX,
             double scaleY) {
@@ -40,18 +52,22 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
         if (event == null) {
             event = new ModelProcessedEvent();
         }
-        event.init(viewTag, data, dimensions, scaleX, scaleY);
+        event.init(viewTag, data, imageData, rgbImgBitmap, dimensions, scaleX, scaleY);
         return event;
     }
 
     private void init(
             int viewTag,
             List<Detector.Recognition> data,
+            byte[] imageData,
+            Bitmap rgbImgBitmap,
             ImageDimensions dimensions,
             double scaleX,
             double scaleY) {
         super.init(viewTag);
-        mData = data;
+        recognitions = data;
+        this.imageData = imageData;
+        this.rgbImgBitmap = rgbImgBitmap;
         mImageDimensions = dimensions;
         mScaleX = scaleX;
         mScaleY = scaleY;
@@ -67,28 +83,15 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
         rctEventEmitter.receiveEvent(getViewTag(), getEventName(), createEvent());
     }
 
-//    private WritableMap createEvent() {
-//        mData.rewind();
-//        byte[] byteArray = new byte[mData.capacity()];
-//        mData.get(byteArray);
-//        WritableArray dataList = Arguments.createArray();
-//        for (byte b : byteArray) {
-//            dataList.pushInt((int)b);
-//        }
-//
-//        WritableMap event = Arguments.createMap();
-//        event.putString("type", "textBlock");
-//        event.putArray("data", dataList);
-//        event.putInt("target", getViewTag());
-//        return event;
-//    }
-
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private WritableMap createEvent() {
 
         WritableArray dataRecognition = Arguments.createArray();
         WritableMap event = Arguments.createMap();
 
-        for (Detector.Recognition recognition : mData) {
+        Log.d(CommonUtil.TAG, imageData.length + "");
+
+        for (Detector.Recognition recognition : recognitions) {
             WritableMap recognitionEvent = Arguments.createMap();
             RectF location = recognition.getLocation();
             String title = recognition.getTitle();
@@ -108,6 +111,15 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
         }
 
         event.putArray("recognitions", dataRecognition);
+        event.putString("imageDataResize", Base64.getEncoder().encodeToString(bitmapToArray(rgbImgBitmap)));
         return event;
+    }
+
+    public static byte[] bitmapToArray(Bitmap bitmap) {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        byte[] byteArray = stream.toByteArray();
+        bitmap.recycle();
+        return byteArray;
     }
 }

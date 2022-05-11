@@ -28,14 +28,15 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, List<Detector
     private int mWidth;
     private int mHeight;
     private int mRotation;
+    private byte[] imageData;
     private Detector detector;
-    private Bitmap croppedBitmap = null;
-    private Bitmap rgbFrameBitmap = null;
+    private Bitmap rgbFrameBitmap;
 
     public ModelProcessorAsyncTask(
             ModelProcessorAsyncTaskDelegate delegate,
             Bitmap bitmap,
             Detector detector,
+            byte[] imageData,
             int modelMaxFreqms,
             int width,
             int height,
@@ -44,6 +45,7 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, List<Detector
         mDelegate = delegate;
         this.detector = detector;
         this.rgbFrameBitmap = bitmap;
+        this.imageData = imageData;
         mModelMaxFreqms = modelMaxFreqms;
         mWidth = width;
         mHeight = height;
@@ -82,7 +84,8 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, List<Detector
         super.onPostExecute(data);
 
         if (data != null) {
-            mDelegate.onModelProcessed(data, mWidth, mHeight, mRotation);
+            Bitmap resized = Bitmap.createScaledBitmap(rgbFrameBitmap, 381, 514, true);
+            mDelegate.onModelProcessed(data, imageData, resized, mWidth, mHeight, mRotation);
         }
         mDelegate.onModelProcessorTaskCompleted();
     }

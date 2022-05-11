@@ -53,7 +53,7 @@ import tflite.Detector;
 import tflite.TFLiteObjectDetectionAPIModel;
 
 public class RNCameraView extends CameraView implements LifecycleEventListener, BarCodeScannerAsyncTaskDelegate, FaceDetectorAsyncTaskDelegate,
-    BarcodeDetectorAsyncTaskDelegate, TextRecognizerAsyncTaskDelegate, PictureSavedDelegate, ModelProcessorAsyncTaskDelegate {
+        BarcodeDetectorAsyncTaskDelegate, TextRecognizerAsyncTaskDelegate, PictureSavedDelegate, ModelProcessorAsyncTaskDelegate {
 
   private ThemedReactContext mThemedReactContext;
   private Queue<Promise> mPictureTakenPromises = new ConcurrentLinkedQueue<>();
@@ -97,6 +97,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   private int mModelImageDimX;
   private int mModelImageDimY;
   private int mModelOutputDim;
+  private int intervalDetection = 3000;
   private ByteBuffer mModelOutput;
 
   private boolean mShouldDetectFaces = false;
@@ -145,7 +146,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
         Promise promise = mPictureTakenPromises.poll();
         ReadableMap options = mPictureTakenOptions.remove(promise);
         if (options.hasKey("fastMode") && options.getBoolean("fastMode")) {
-            promise.resolve(null);
+          promise.resolve(null);
         }
         final File cacheDirectory = mPictureTakenDirectories.remove(promise);
         if(Build.VERSION.SDK_INT >= 11/*HONEYCOMB*/) {
@@ -205,7 +206,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
         }
 
         if (data.length < (1.5 * width * height)) {
-            return;
+          return;
         }
 
         if (willCallBarCodeTask) {
@@ -252,9 +253,10 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
           Bitmap bitmap = ((TextureView) cameraView.getView()).getBitmap();
 
           try {
-            Thread.sleep(100);
+            Thread.sleep(intervalDetection);
             ModelProcessorAsyncTaskDelegate delegate = (ModelProcessorAsyncTaskDelegate) cameraView;
-            new ModelProcessorAsyncTask(delegate, bitmap, xDetector, mModelMaxFreqms, width, height, correctRotation).execute();
+            new ModelProcessorAsyncTask(delegate, bitmap, xDetector, data, mModelMaxFreqms,
+                    width, height, correctRotation).execute();
           } catch (Exception ex) {
           }
         }
@@ -660,8 +662,8 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   /**
-  *
-  * End Text Recognition */
+   *
+   * End Text Recognition */
 
   @Override
   public void onHostResume() {
@@ -706,12 +708,12 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     // camera release can be quite expensive. Run in on bg handler
     // and cleanup last once everything has finished
     mBgHandler.post(new Runnable() {
-        @Override
-        public void run() {
-          stop();
-          cleanup();
-        }
-      });
+      @Override
+      public void run() {
+        stop();
+        cleanup();
+      }
+    });
   }
   private void onZoom(float scale){
     float currentZoom=getZoom();
@@ -773,13 +775,14 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   };
 
   @Override
-  public void onModelProcessed(List<Detector.Recognition> recognitions, int sourceWidth, int sourceHeight, int sourceRotation) {
+  public void onModelProcessed(List<Detector.Recognition> recognitions, byte[] imageData,
+                               Bitmap rgbImgBitmap, int sourceWidth, int sourceHeight,
+                               int sourceRotation) {
     if (!mShouldProcessModel) {
       return;
     }
     ImageDimensions dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
-
-    RNCameraViewHelper.emitModelProcessedEvent(this, recognitions, dimensions);
+    RNCameraViewHelper.emitModelProcessedEvent(this, recognitions, imageData, rgbImgBitmap, dimensions);
   }
 
   @Override
@@ -797,8 +800,6 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   }
 
   private static final int TF_OD_API_INPUT_SIZE = 300;
-  private static final String TF_OD_API_MODEL_FILE = "detect.tflite";
-  private static final String TF_OD_API_LABELS_FILE = "labels.txt";
   private static final boolean TF_OD_API_IS_QUANTIZED = false;
 
   private void setupModelProcessor() {
