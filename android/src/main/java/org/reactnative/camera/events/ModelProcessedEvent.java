@@ -39,7 +39,6 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
     private Bitmap rgbImgBitmap;
     private ImageDimensions mImageDimensions;
 
-
     public static ModelProcessedEvent obtain(
             int viewTag,
             List<Detector.Recognition> data,
@@ -97,7 +96,6 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
             String title = recognition.getTitle();
             Float confidence = recognition.getConfidence();
 
-//            recognitionEvent.putBoolean("detected", true);
             recognitionEvent.putString("title", title);
             recognitionEvent.putDouble("confidence", confidence);
 
