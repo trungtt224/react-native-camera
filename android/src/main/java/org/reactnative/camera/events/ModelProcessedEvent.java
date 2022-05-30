@@ -26,6 +26,7 @@ import java.util.Base64;
 import java.util.List;
 
 import tflite.Detector;
+import tflite.Recognitions;
 
 public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
     private static final Pools.SynchronizedPool<ModelProcessedEvent> EVENTS_POOL =
@@ -34,14 +35,15 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
     private double mScaleX;
     private double mScaleY;
     //    private ByteBuffer mData;
-    private List<Detector.Recognition> recognitions;
+//    private List<Detector.Recognition> recognitions;
+    private Recognitions recognitions;
     private byte[] imageData;
     private Bitmap rgbImgBitmap;
     private ImageDimensions mImageDimensions;
 
     public static ModelProcessedEvent obtain(
             int viewTag,
-            List<Detector.Recognition> data,
+            Recognitions data,
             byte[] imageData,
             Bitmap rgbImgBitmap,
             ImageDimensions dimensions,
@@ -57,7 +59,7 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
 
     private void init(
             int viewTag,
-            List<Detector.Recognition> data,
+            Recognitions data,
             byte[] imageData,
             Bitmap rgbImgBitmap,
             ImageDimensions dimensions,
@@ -77,6 +79,7 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
         return CameraViewManager.Events.EVENT_ON_MODEL_PROCESSED.toString();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void dispatch(RCTEventEmitter rctEventEmitter) {
         rctEventEmitter.receiveEvent(getViewTag(), getEventName(), createEvent());
@@ -90,7 +93,9 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
 
         Log.d(CommonUtil.TAG, imageData.length + "");
 
-        for (Detector.Recognition recognition : recognitions) {
+        List<Detector.Recognition> detectorRecognitions = recognitions.getRecognitions();
+
+        for (Detector.Recognition recognition : detectorRecognitions) {
             WritableMap recognitionEvent = Arguments.createMap();
             RectF location = recognition.getLocation();
             String title = recognition.getTitle();
@@ -110,6 +115,7 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
 
         event.putArray("recognitions", dataRecognition);
         event.putString("imageDataResize", Base64.getEncoder().encodeToString(bitmapToArray(rgbImgBitmap)));
+        event.putInt("processTime", (int) recognitions.getTimeTaken());
         return event;
     }
 

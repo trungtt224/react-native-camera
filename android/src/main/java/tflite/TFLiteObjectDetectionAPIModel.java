@@ -155,7 +155,7 @@ public class TFLiteObjectDetectionAPIModel implements Detector {
     }
 
     @Override
-    public List<Recognition> recognizeImage(final Bitmap bitmap) {
+    public List<Recognition> recognizeImage(final Bitmap bitmap, final int cameraViewWidth, final int cameraViewHeight) {
         // Log this method so that it can be analyzed with systrace.
         Log.d("recognizeImage",
                 String.format("bitmap size: width=%d, height=%d", bitmap.getWidth(), bitmap.getHeight()));
@@ -233,13 +233,14 @@ public class TFLiteObjectDetectionAPIModel implements Detector {
         // after scaling them back to the input size.
         final ArrayList<Recognition> recognitions = new ArrayList<>(NUM_DETECTIONS);
         for (int i = 0; i < NUM_DETECTIONS; ++i) {
-            int originalWidth = bitmap.getWidth();
-            int originalHeight = bitmap.getHeight();
-            Log.d(CommonUtil.TAG, "recognizeImage: " + originalWidth + " x " + originalHeight);
-            int ymin = (int) Math.max(1, outputLocations[0][i][0] * originalHeight);
-            int xmin = (int) Math.max(1, outputLocations[0][i][1] * originalWidth);
-            int ymax = (int) Math.min(originalHeight, outputLocations[0][i][2] * originalHeight);
-            int xmax = (int) Math.min(originalWidth, outputLocations[0][i][3] * originalWidth);
+//            int originalWidth = bitmap.getWidth();
+//            int originalHeight = bitmap.getHeight();
+
+            Log.d(CommonUtil.TAG, "recognizeImage: " + cameraViewWidth + " x " + cameraViewHeight);
+            int ymin = (int) Math.max(1, outputLocations[0][i][0] * cameraViewHeight);
+            int xmin = (int) Math.max(1, outputLocations[0][i][1] * cameraViewWidth);
+            int ymax = (int) Math.min(cameraViewHeight, outputLocations[0][i][2] * cameraViewHeight);
+            int xmax = (int) Math.min(cameraViewWidth, outputLocations[0][i][3] * cameraViewWidth);
 
             final RectF detection =
                     new RectF(xmin, ymin, xmax, ymax);

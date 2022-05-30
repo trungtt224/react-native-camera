@@ -248,7 +248,8 @@ public class CameraViewManager extends ViewGroupManager<RNCameraView> {
   public void setModelParams(RNCameraView view, ReadableMap model) {
     String modelFile = model.getString("modelFile");
     String label = model.getString("labelFile");
+    int delay = model.getInt("delay");
     int freqms = model.hasKey("freqms") ? model.getInt("freqms") : 0;
-    view.setObjectModelFile(modelFile, label, freqms);
+    view.setObjectModelFile(modelFile, label, freqms, delay);
   }
 }

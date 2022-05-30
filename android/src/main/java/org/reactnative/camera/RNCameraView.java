@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import tflite.Detector;
+import tflite.Recognitions;
 import tflite.TFLiteObjectDetectionAPIModel;
 
 public class RNCameraView extends CameraView implements LifecycleEventListener, BarCodeScannerAsyncTaskDelegate, FaceDetectorAsyncTaskDelegate,
@@ -256,7 +257,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
             Thread.sleep(intervalDetection);
             ModelProcessorAsyncTaskDelegate delegate = (ModelProcessorAsyncTaskDelegate) cameraView;
             new ModelProcessorAsyncTask(delegate, bitmap, xDetector, data, mModelMaxFreqms,
-                    width, height, correctRotation).execute();
+                    width, height, mCameraViewWidth, mCameraViewHeight, correctRotation).execute();
           } catch (Exception ex) {
           }
         }
@@ -775,7 +776,7 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   };
 
   @Override
-  public void onModelProcessed(List<Detector.Recognition> recognitions, byte[] imageData,
+  public void onModelProcessed(Recognitions recognitions, byte[] imageData,
                                Bitmap rgbImgBitmap, int sourceWidth, int sourceHeight,
                                int sourceRotation) {
     if (!mShouldProcessModel) {
@@ -826,10 +827,11 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     setScanning(mShouldDetectFaces || mShouldGoogleDetectBarcodes || mShouldScanBarCodes || mShouldRecognizeText || mShouldProcessModel);
   }
 
-  public void setObjectModelFile(String modelFile, String labelFile, int freqms) {
+  public void setObjectModelFile(String modelFile, String labelFile, int freqms, int delay) {
     this.mModelFile = modelFile;
     this.mLabelFile = labelFile;
     this.mModelMaxFreqms = freqms;
+    this.intervalDetection = delay;
 
     boolean shouldProcessModel = (modelFile != null);
     if (shouldProcessModel && xDetector == null) {

@@ -27,6 +27,7 @@ import java.util.Calendar;
 import java.util.List;
 
 import tflite.Detector;
+import tflite.Recognitions;
 
 public class RNCameraViewHelper {
 
@@ -341,7 +342,7 @@ public class RNCameraViewHelper {
 
   public static void emitModelProcessedEvent(
           ViewGroup view,
-          List<Detector.Recognition> recognitions,
+          Recognitions recognitions,
           byte[] imageData,
           Bitmap rgbImgBitmap,
           ImageDimensions dimensions) {
