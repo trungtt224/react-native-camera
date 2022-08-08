@@ -1,7 +1,7 @@
 {
   "name": "react-native-x-vision-camera",
   "description": "A Camera component for React Native. Also reads barcodes.",
-  "version": "0.0.6",
+  "version": "0.0.9",
   "author": "Lochlan Wansbrough <lochie@live.com> (http://lwansbrough.com)",
   "collective": {
     "type": "opencollective",

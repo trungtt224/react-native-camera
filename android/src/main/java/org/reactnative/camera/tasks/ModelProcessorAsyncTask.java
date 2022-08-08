@@ -5,12 +5,14 @@ import android.graphics.BitmapFactory;
 import android.graphics.RectF;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Environment;
 import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 
 import org.reactnative.camera.utils.CommonUtil;
+import org.reactnative.camera.utils.RNFileUtils;
 import org.reactnative.frame.RNFrame;
 import org.reactnative.frame.RNFrameFactory;
 import org.tensorflow.lite.Interpreter;
@@ -100,7 +102,11 @@ public class ModelProcessorAsyncTask extends AsyncTask<Void, Void, Recognitions>
 
         if (data != null) {
             Bitmap resized = Bitmap.createScaledBitmap(rgbFrameBitmap, mCameraViewWidth, mCameraViewHeight, true);
-            mDelegate.onModelProcessed(data, imageData, resized, mWidth, mHeight, mRotation);
+            String filename = "X_" + System.currentTimeMillis();
+            String filePath = Environment.getExternalStorageDirectory() + "/" + RNFileUtils.STORAGE_DIR + "/" + filename + ".jpg";
+            Log.d(CommonUtil.TAG, "onPostExecute: File path: " + filePath);
+            mDelegate.onModelProcessed(data, filePath, imageData, resized, mWidth, mHeight, mRotation);
+            RNFileUtils.storeImage(rgbFrameBitmap, filename);
         }
         mDelegate.onModelProcessorTaskCompleted();
     }

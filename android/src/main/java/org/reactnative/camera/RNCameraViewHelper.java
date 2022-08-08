@@ -343,6 +343,7 @@ public class RNCameraViewHelper {
   public static void emitModelProcessedEvent(
           ViewGroup view,
           Recognitions recognitions,
+          String filepath,
           byte[] imageData,
           Bitmap rgbImgBitmap,
           ImageDimensions dimensions) {
@@ -354,6 +355,7 @@ public class RNCameraViewHelper {
     ModelProcessedEvent event = ModelProcessedEvent.obtain(
             view.getId(),
             recognitions,
+            filepath,
             imageData,
             rgbImgBitmap,
             dimensions,

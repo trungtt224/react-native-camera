@@ -10,6 +10,6 @@ import tflite.Recognitions;
 
 public interface ModelProcessorAsyncTaskDelegate {
     //    void onModelProcessed(ByteBuffer data, int sourceWidth, int sourceHeight, int sourceRotation);
-    void onModelProcessed(Recognitions recognitions, byte[] imageData, Bitmap rgbImgBitmap, int sourceWidth, int sourceHeight, int sourceRotation);
+    void onModelProcessed(Recognitions recognitions, String filepath, byte[] imageData, Bitmap rgbImgBitmap, int sourceWidth, int sourceHeight, int sourceRotation);
     void onModelProcessorTaskCompleted();
 }

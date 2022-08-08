@@ -40,10 +40,12 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
     private byte[] imageData;
     private Bitmap rgbImgBitmap;
     private ImageDimensions mImageDimensions;
+    private String filepath;
 
     public static ModelProcessedEvent obtain(
             int viewTag,
             Recognitions data,
+            String filepath,
             byte[] imageData,
             Bitmap rgbImgBitmap,
             ImageDimensions dimensions,
@@ -53,13 +55,14 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
         if (event == null) {
             event = new ModelProcessedEvent();
         }
-        event.init(viewTag, data, imageData, rgbImgBitmap, dimensions, scaleX, scaleY);
+        event.init(viewTag, data, filepath, imageData, rgbImgBitmap, dimensions, scaleX, scaleY);
         return event;
     }
 
     private void init(
             int viewTag,
             Recognitions data,
+            String filepath,
             byte[] imageData,
             Bitmap rgbImgBitmap,
             ImageDimensions dimensions,
@@ -67,6 +70,7 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
             double scaleY) {
         super.init(viewTag);
         recognitions = data;
+        this.filepath = filepath;
         this.imageData = imageData;
         this.rgbImgBitmap = rgbImgBitmap;
         mImageDimensions = dimensions;
@@ -114,6 +118,7 @@ public class ModelProcessedEvent extends Event<ModelProcessedEvent> {
         }
 
         event.putArray("recognitions", dataRecognition);
+        event.putString("filepath", filepath);
         event.putString("imageDataResize", Base64.getEncoder().encodeToString(bitmapToArray(rgbImgBitmap)));
         event.putInt("processTime", (int) recognitions.getTimeTaken());
         return event;

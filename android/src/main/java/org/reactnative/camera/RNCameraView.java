@@ -776,14 +776,14 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
   };
 
   @Override
-  public void onModelProcessed(Recognitions recognitions, byte[] imageData,
+  public void onModelProcessed(Recognitions recognitions, String filepath, byte[] imageData,
                                Bitmap rgbImgBitmap, int sourceWidth, int sourceHeight,
                                int sourceRotation) {
     if (!mShouldProcessModel) {
       return;
     }
     ImageDimensions dimensions = new ImageDimensions(sourceWidth, sourceHeight, sourceRotation, getFacing());
-    RNCameraViewHelper.emitModelProcessedEvent(this, recognitions, imageData, rgbImgBitmap, dimensions);
+    RNCameraViewHelper.emitModelProcessedEvent(this, recognitions, filepath, imageData, rgbImgBitmap, dimensions);
   }
 
   @Override
@@ -800,7 +800,8 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
   }
 
-  private static final int TF_OD_API_INPUT_SIZE = 300;
+//  private static final int TF_OD_API_INPUT_SIZE = 300;
+  private static final int TF_OD_API_INPUT_SIZE = 500;
   private static final boolean TF_OD_API_IS_QUANTIZED = false;
 
   private void setupModelProcessor() {
